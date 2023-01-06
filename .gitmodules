@@ -1,0 +1,3 @@
+[submodule "immer"]
+	path = immer
+	url = git@github.com:arximboldi/immer.git
