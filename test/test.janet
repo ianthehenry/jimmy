@@ -18,3 +18,5 @@
 (assert-equal (set/add x 4 5 6) (set/new 1 2 3 4 5 6))
 (assert-equal (set/remove x 1 2 3) (set/new))
 (assert-equal (set/new) set/empty)
+
+(assert (= 1 (length (set/new nil nil nil))))
