@@ -214,10 +214,75 @@ static Janet cfun_set_remove(int32_t argc, Janet *argv) {
   return janet_wrap_abstract(new_set);
 }
 
+static Janet cfun_set_union(int32_t argc, Janet *argv) {
+  auto new_set = NEW_SET();
+  auto transient = new_set->transient();
+  for (int32_t i = 0; i < argc; i++) {
+    auto old_set = CAST_SET(janet_getabstract(argv, i, &set_type));
+    for (auto el : *old_set) {
+      transient.insert(el);
+    }
+  }
+  *new_set = transient.persistent();
+  return janet_wrap_abstract(new_set);
+}
+
+static immer::set<Janet> *intersect2(immer::set<Janet> *a, immer::set<Janet> *b) {
+  auto new_set = NEW_SET();
+  auto transient = new_set->transient();
+  for (auto el : *a) {
+    if (b->count(el)) {
+      transient.insert(el);
+    }
+  }
+  return new_set;
+}
+
+// We could specialize this to count elements in a temporary map when argc > 2
+// but, you know, this library is not making any guarantees about time complexity.
+static Janet cfun_set_intersection(int32_t argc, Janet *argv) {
+  if (argc == 0) {
+    return janet_wrap_abstract(NEW_SET());
+  } else {
+    auto first_set = CAST_SET(janet_getabstract(argv, 0, &set_type));
+    for (int32_t i = 1; i < argc; i++) {
+      first_set = intersect2(first_set, CAST_SET(janet_getabstract(argv, i, &set_type)));
+    }
+    return janet_wrap_abstract(first_set);
+  }
+}
+
+static Janet cfun_set_difference(int32_t argc, Janet *argv) {
+  janet_arity(argc, 1, -1);
+  auto new_set = NEW_SET();
+  auto transient = new_set->transient();
+  for (int32_t i = 0; i < argc; i++) {
+    auto old_set = CAST_SET(janet_getabstract(argv, i, &set_type));
+    if (i == 0) {
+      *new_set = *old_set;
+    } else {
+      for (auto el : *old_set) {
+        transient.erase(el);
+      }
+    }
+  }
+  *new_set = transient.persistent();
+  return janet_wrap_abstract(new_set);
+}
+
 static const JanetReg cfuns[] = {
-  {"set/new", cfun_set_new, NULL},
-  {"set/add", cfun_set_add, NULL},
-  {"set/remove", cfun_set_remove, NULL},
+  {"set/new", cfun_set_new, "(set/new & xs)\n\n"
+    "Returns a persistent immutable set containing only the listed elements."},
+  {"set/add", cfun_set_add, "(set/add set & xs)\n\n"
+    "Returns a set containing the union of the original set and the rest of the arguments."},
+  {"set/remove", cfun_set_remove, "(set/remove set & xs)\n\n"
+    "Returns a set containing the elements from the original set without any of the arguments."},
+  {"set/union", cfun_set_union, "(set/union & sets)\n\n"
+    "Returns a set that is the union of all of its arguments."},
+  {"set/intersection", cfun_set_intersection, "(set/intersection & sets)\n\n"
+    "Returns a set that is the intersection of all of its arguments. Naively folds when given more than two arguments."},
+  {"set/difference", cfun_set_difference, "(set/difference set & sets)\n\n"
+    "Returns a set that is the first set minus all of the latter sets."},
   {NULL, NULL, NULL}
 };
 
