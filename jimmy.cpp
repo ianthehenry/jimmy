@@ -5,13 +5,13 @@
 namespace std {
   template <> struct hash<Janet> {
     size_t operator()(const Janet &x) const {
-      return (size_t)janet_hash(x);
+      return static_cast<size_t>(janet_hash(x));
     }
   };
 
   template <> struct equal_to<Janet> {
     size_t operator()(const Janet &a, const Janet &b) const {
-      return (bool)janet_equals(a, b);
+      return static_cast<bool>(janet_equals(a, b));
     }
   };
 }
@@ -131,23 +131,20 @@ static int set_compare(void *data1, void *data2) {
   return set1 > set2 ? 1 : -1;
 }
 
+static int32_t hash_mix(int32_t input, int32_t other) {
+  return input ^ (other + 0x7BA481B5 + (input << 6) + (input >> 2));
+}
+
 static int32_t set_hash(void *data, size_t len) {
   (void) len;
   auto set = static_cast<immer::set<Janet> *>(data);
-  uint32_t hash = 0x72b3f4e9;
+  // start with a random permutation of 16 1s and 16 0s
+  uint32_t hash = 0x7EB6D401;
+  // Iteration is order is stable over hash values, regardless
+  // of how you construct the set.
+  // https://github.com/arximboldi/immer/discussions/249#discussioncomment-4620734
   for (auto el : *set) {
-    // This is not a very good hash function, but it will give us the same
-    // result regardless of the order that the iterator visits elements.
-    //
-    // Experimentally, it does seem that immer will iterate over elements of
-    // a set in a stable order regardless of insertion, but this fact is not
-    // documented and I'm uncomfortable relying on it. It does seems
-    // reasonable that immer would iterate over elements in a stable order if
-    // you only consider their hash value, like Janet does, which would make
-    // this untrue in general but sufficient for this function.
-    //
-    // In any case... this is fine for now.
-    hash ^= janet_hash(el);
+    hash = hash_mix(hash, static_cast<int32_t>(std::hash<Janet>()(el)));
   }
   return hash;
 }
