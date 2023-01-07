@@ -287,8 +287,7 @@ static const JanetReg cfuns[] = {
 };
 
 JANET_MODULE_ENTRY(JanetTable *env) {
-  janet_cfuns(env, "jimmy/set", cfuns);
+  janet_cfuns(env, "jimmy", cfuns);
   janet_register_abstract_type(&set_type);
   janet_register_abstract_type(&set_iterator_type);
-  janet_def(env, "set/empty", cfun_set_new(0, NULL), NULL);
 }

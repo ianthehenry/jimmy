@@ -8,3 +8,7 @@
 (declare-source
   :source "set/init.janet"
   :prefix "jimmy/set")
+
+(declare-source
+  :source "init.janet"
+  :prefix "jimmy")
