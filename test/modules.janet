@@ -1,3 +1,3 @@
-(import / :as jimmy)
-(import /set)
+(import ../src :as jimmy)
+(import ../src/set)
 (assert (= jimmy/set/new set/new))

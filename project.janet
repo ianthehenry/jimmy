@@ -6,9 +6,5 @@
   :cppflags ["-Iimmer" "-std=c++14"])
 
 (declare-source
-  :source "set/init.janet"
-  :prefix "jimmy/set")
-
-(declare-source
-  :source "init.janet"
+  :source ["src/set.janet" "src/init.janet"]
   :prefix "jimmy")

@@ -1,4 +1,4 @@
-(import /set)
+(import ../src/set)
 
 (defn assert-equal [a b]
   (assert (= a b))
