@@ -23,6 +23,13 @@ static int32_t hash_mix(int32_t input, int32_t other) {
   return input ^ (other + 0b01111011101001001000000110110101 + (input << 6) + (input >> 2));
 }
 
+static Janet pair_to_tuple(std::pair<Janet, Janet> pair) {
+  Janet *tuple = janet_tuple_begin(2);
+  tuple[0] = pair.first;
+  tuple[1] = pair.second;
+  return janet_wrap_tuple(janet_tuple_end(tuple));
+}
+
 // TODO: this is copied from `janet_method_invoke` -- there doesn't seem
 // to be an exposed way to do this!
 static Janet call_callable(Janet callable, int32_t argc, Janet *argv) {

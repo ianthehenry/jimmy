@@ -26,3 +26,20 @@
 (assert= ((map/new 1 2 3 4) 3) 4)
 (assert-throws ((map/new 1 2 3 4) 5) "key 5 not found")
 (assert= ((map/new 1 2 3 4) 5 :default) :default)
+
+# Iteration
+
+(def iterator (next (map/new 1 2 3 4)))
+(assert-throws (get (map/new 1 2 3 4) iterator) "foreign iterator")
+
+(assert= [[1 2] [3 4]] (tuple/slice (sorted (seq [x :in (map/new 1 2 3 4)] x))))
+
+(def iterator (next (map/new 1 2 3 4)))
+(assert= [[1 2] [3 4]] (tuple/slice (sorted
+  (seq [x :in iterator] x))))
+
+(def m (map/new 1 2 3 4))
+(assert= [[1 2] [3 4]] (tuple/slice (sorted (seq [x :in m] x))))
+(assert= [1 3] (tuple/slice (sorted (seq [x :in (map/keys m)] x))))
+(assert= [2 4] (tuple/slice (sorted (seq [x :in (map/values m)] x))))
+(assert= [[1 2] [3 4]] (tuple/slice (sorted (seq [x :in (map/pairs m)] x))))

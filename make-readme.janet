@@ -51,7 +51,9 @@ Janet bindings for [immer](https://github.com/arximboldi/immer), a library of im
 #| {3 5 4}
 ```
 
-You can `(use jimmy)` to bring all types into scope as `set/new`, `map/new`, etc., or you can `(import jimmy/set)` to only bring set-related bindings into scope.
+You can `(use jimmy)` to bring all types into scope as `set/new`, `map/new`, etc., or you can `(import jimmy/set)` to only bring a specific submodule into scope.
+
+**Note: the `jimmy/map` module is extremely incomplete.**
 
 # API
 
@@ -63,21 +65,41 @@ You can `(use jimmy)` to bring all types into scope as `set/new`, `map/new`, etc
    "`:*` is an alias for `set/intersection`"
    "`:-` is an alias for `set/difference`"])
 
+(print-docs-for "map"
+  ["`map/empty` is the empty map"]
+  [])
+
 (print
 `````
 # Gotchas
 
+Janet's iteration protocol is not flexible enough for Jimmy to support `eachk` or `eachp` or the `:keys` and `:pairs` directive in `loop`-family macros.
+
 Unlike Janet's tables and structs, Jimmy data structures can contain `nil`:
 
 ```
-repl:1:> (import jimmy/set)
+repl:1:> (use jimmy)
 repl:2:> (set/new 1 2 3 nil)
 <jimmy/set {3 1 nil 2}>
+repl:3:> (map/new nil :value :key nil)
+<jimmy/map {nil :value :key nil}>
+```
+
+Iterating over a map with `each` will iterate over key-value pairs, not just values. To iterate over values, use:
+
+```
+(each value (map/values map)
+  (print value))
+```
+
+You should not use `eachk` or `eachp` with Jimmy maps, because `next` returns an iterator, not a key. To iterate over the keys in a map, use:
+
+```
+(each value (map/keys map)
+  (print value))
 ```
 
 In order to support iteratation with Janet's `next` protocol for unordered containers, Jimmy boxes the corresponding C++ iterator into an abstract type to use as the key. This means that a simple `(each el set (print el))` will allocate memory for the abstract type containing the iterator. It's not a *lot* of memory, but it's short-lived garbage and Janet's GC currently does nothing to optimize for short-lived garbage. This probably won't cause performance problems, just something to bear in mind.
-
-I cannot think of a reasonable way to support iteration over `map` values with a meaningful key, because `immer` does not exposes enough functionality to retrieve the next key given an extant key in anything less than linear time. `immer::map`'s `find` returns a *pointer* rather than an iterator that we could use to advance to implement this. Jimmy does not currently have bindings for `map` at all, though, so you can't tell.
 
 Also, I don't know C++, which is sort of a flaw when trying to write bindings for a C++ library, so I would caution you to read the code with a very critical eye. Code review welcome!
 
@@ -85,5 +107,4 @@ Also, I don't know C++, which is sort of a flaw when trying to write bindings fo
 
 - [ ] add bindings for `immer::map`
 - [ ] 1.0 release
-- [ ] iterators do not keep their backing data structures alive
 `````)

@@ -2,14 +2,92 @@
 #include <immer/map_transient.hpp>
 
 #define CAST_MAP(expr) static_cast<immer::map<Janet, Janet> *>((expr))
-#define CAST_MAP_ITERATOR(expr) static_cast<immer::map<Janet, Janet>::iterator *>((expr))
+#define CAST_MAP_ITERATOR(expr) static_cast<MapIterator *>((expr))
 #define NEW_MAP() new (janet_abstract(&map_type, sizeof(immer::map<Janet, Janet>))) immer::map<Janet, Janet>()
 #define KVP(k, v) std::pair<Janet, Janet>((k), (v))
 
+typedef enum {
+  Keys,
+  Values,
+  Pairs,
+} IteratorType;
+
+typedef struct {
+  immer::map<Janet, Janet>::iterator actual;
+  Janet backing_map;
+  IteratorType type;
+} MapIterator;
+
+static Janet map_iterator_value(MapIterator *iterator) {
+  std::pair<Janet, Janet> pair = *iterator->actual;
+  switch (iterator->type) {
+  case Keys: return pair.first;
+  case Values: return pair.second;
+  case Pairs: return pair_to_tuple(pair);
+  }
+}
+
+static void check_map_iterator(void *data, MapIterator *iterator) {
+  if (data != janet_unwrap_abstract(iterator->backing_map)) {
+    janet_panicf("foreign iterator");
+  }
+}
+
+static int map_iterator_gcmark(void *data, size_t len) {
+  (void) len;
+  auto iterator = CAST_MAP_ITERATOR(data);
+  janet_mark(iterator->backing_map);
+  return 0;
+}
+
+static Janet map_iterator_next(void *data, Janet key);
+static int map_iterator_get(void *data, Janet key, Janet *out);
 static const JanetAbstractType map_iterator_type = {
   "jimmy/map-iterator",
-  JANET_ATEND_NAME
+  .gc = NULL,
+  .gcmark = map_iterator_gcmark,
+  .get = map_iterator_get,
+  .put = NULL,
+  .marshal = NULL,
+  .unmarshal = NULL,
+  .tostring = NULL,
+  .compare = NULL,
+  .hash = NULL,
+  .next = map_iterator_next,
+  .call = NULL,
 };
+
+static Janet map_iterator_next(void *data, Janet key) {
+  if (janet_checktype(key, JANET_NIL)) {
+    return janet_wrap_abstract(data);
+  } else if (janet_checkabstract(key, &map_iterator_type) && janet_unwrap_abstract(key) == data) {
+    auto iterator = CAST_MAP_ITERATOR(janet_unwrap_abstract(key));
+    auto map = CAST_MAP(janet_unwrap_abstract(iterator->backing_map));
+    iterator->actual++;
+    if (iterator->actual == map->end()) {
+      return janet_wrap_nil();
+    } else {
+      return key;
+    }
+  } else {
+    janet_panicf("illegal key %v", key);
+  }
+}
+
+static int map_iterator_get(void *data, Janet key, Janet *out) {
+  if (janet_checkabstract(key, &map_iterator_type) && janet_unwrap_abstract(key) == data) {
+    auto iterator = CAST_MAP_ITERATOR(janet_unwrap_abstract(key));
+    auto map = CAST_MAP(janet_unwrap_abstract(iterator->backing_map));
+    if (iterator->actual == map->end()) {
+      return 0;
+    } else {
+      *out = map_iterator_value(iterator);
+      return 1;
+    }
+  } else {
+    return 0;
+  }
+}
 
 static int map_gc(void *data, size_t len) {
   (void) len;
@@ -56,16 +134,11 @@ static const JanetMethod map_methods[] = {
   {NULL, NULL}
 };
 
-static Janet pair_to_tuple(std::pair<Janet, Janet> pair) {
-  Janet *tuple = janet_tuple_begin(2);
-  tuple[0] = pair.first;
-  tuple[1] = pair.second;
-  return janet_wrap_tuple(janet_tuple_end(tuple));
-}
-
 static int map_get(void *data, Janet key, Janet *out) {
   if (janet_checkabstract(key, &map_iterator_type)) {
-    *out = pair_to_tuple(**CAST_MAP_ITERATOR(janet_unwrap_abstract(key)));
+    auto iterator = CAST_MAP_ITERATOR(janet_unwrap_abstract(key));
+    check_map_iterator(data, iterator);
+    *out = map_iterator_value(iterator);
     return 1;
   } else if (janet_checktype(key, JANET_KEYWORD)) {
     return janet_getmethod(janet_unwrap_keyword(key), map_methods, out);
@@ -74,21 +147,28 @@ static int map_get(void *data, Janet key, Janet *out) {
   }
 }
 
+static Janet new_map_iterator(immer::map<Janet, Janet> *map, IteratorType type) {
+  auto iterator = CAST_MAP_ITERATOR(janet_abstract(&map_iterator_type, sizeof(MapIterator)));
+  iterator->backing_map = janet_wrap_abstract(map);
+  iterator->actual = map->begin();
+  iterator->type = type;
+  return janet_wrap_abstract(iterator);
+}
+
 static Janet map_next(void *data, Janet key) {
   auto map = CAST_MAP(data);
 
   if (janet_checktype(key, JANET_NIL)) {
-    auto iterator = CAST_MAP_ITERATOR(janet_abstract(&map_iterator_type, sizeof(immer::map<Janet, Janet>::iterator)));
-    *iterator = map->begin();
-    return janet_wrap_abstract(iterator);
+    return new_map_iterator(map, IteratorType::Pairs);
   }
 
   if (!janet_checkabstract(key, &map_iterator_type)) {
     janet_panicf("map key should be an iterator; got %v", key);
   }
   auto iterator = CAST_MAP_ITERATOR(janet_unwrap_abstract(key));
-  (*iterator)++;
-  if (*iterator == map->end()) {
+  check_map_iterator(data, iterator);
+  iterator->actual++;
+  if (iterator->actual == map->end()) {
     return janet_wrap_nil();
   } else {
     return key;
@@ -188,8 +268,29 @@ static Janet cfun_map_new(int32_t argc, Janet *argv) {
   return janet_wrap_abstract(map);
 }
 
+static Janet cfun_map_keys(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 1);
+  return new_map_iterator(CAST_MAP(janet_getabstract(argv, 0, &map_type)), IteratorType::Keys);
+}
+
+static Janet cfun_map_values(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 1);
+  return new_map_iterator(CAST_MAP(janet_getabstract(argv, 0, &map_type)), IteratorType::Values);
+}
+
+static Janet cfun_map_pairs(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 1);
+  return new_map_iterator(CAST_MAP(janet_getabstract(argv, 0, &map_type)), IteratorType::Pairs);
+}
+
 static const JanetReg map_cfuns[] = {
   {"map/new", cfun_map_new, "(map/new & kvs)\n\n"
     "Returns a persistent immutable map containing the listed entries."},
+  {"map/keys", cfun_map_keys, "(map/keys map)\n\n"
+    "Returns an iterator over the keys in the map."},
+  {"map/values", cfun_map_values, "(map/values map)\n\n"
+    "Returns an iterator over the values in the map."},
+  {"map/pairs", cfun_map_pairs, "(map/pairs map)\n\n"
+    "Returns an iterator over the key-value pairs in the map."},
   {NULL, NULL, NULL}
 };
