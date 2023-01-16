@@ -3,7 +3,7 @@
 Janet bindings for [immer](https://github.com/arximboldi/immer), a library of immutable data structures.
 
 ```
-(import jimmy/set)
+(use jimmy)
 
 (def good-numbers (set/new 1 2 3 4 5))
 (print good-numbers)
@@ -21,16 +21,15 @@ Janet bindings for [immer](https://github.com/arximboldi/immer), a library of im
 # operators are standing by
 (print (- good-numbers (set/new 1 2)))
 #| {3 5 4}
-
 ```
 
-Currently Jimmy only exposes the `set` container, and the API is woefully incomplete. But I hope this can serve as a useful example of how to write abstract types in Janet.
-
-I don't know C++, though, which is sort of a flaw when trying to write bindings for a C++ library, so I would caution you to read the code with a very critical eye. Code review welcome!
+You can `(use jimmy)` to bring all types into scope as `set/new`, `map/new`, etc., or you can `(import jimmy/set)` to only bring set-related bindings into scope.
 
 # API
 
-## Functions
+## `jimmy/set`
+
+### Functions
 
 ```janet
 (set/add set & xs)
@@ -45,6 +44,8 @@ Returns a new set containing all of the elements from the original set and all o
 ```
 
 Returns the number of elements in the set that match the given predicate. `pred` can be any callable value, not just a function.
+
+Note that the arguments are in a different order than Janet's `count` function.
 
 ---
 
@@ -61,6 +62,8 @@ Returns a set that is the first set minus all of the latter sets.
 ```
 
 Returns a set containing only the elements for which the predicate returns a truthy value. `pred` can be any callable value, not just a function.
+
+Note that the arguments are in the opposite order of Janet's `filter` function.
 
 ---
 
@@ -85,6 +88,8 @@ Returns a set that is the intersection of all of its arguments. Naively folds wh
 ```
 
 Returns a new set derived from the given transformation function. `f` can be any callable value, not just a function.
+
+Note that the arguments are in the opposite order of Janet's `map` function.
 
 ---
 
@@ -117,6 +122,8 @@ Returns a set of all the keys in an interable data structure.
 ```
 
 Returns a reduction of the elements in the set, which will be traversed in arbitrary order. `f` can be any callable value, not just a function.
+
+Note that the arguments are in a different order than Janet's `reduce` function.
 
 ---
 
@@ -182,15 +189,15 @@ Returns a tuple of all of the elements in the set, in no particular order.
 
 Returns a set that is the union of all of its arguments.
 
-## Values
-
-- `set/empty` is the empty set.
-
-## Methods
+### Methods
 
 - `:+` is an alias for `set/union`
 - `:*` is an alias for `set/intersection`
 - `:-` is an alias for `set/difference`
+
+### Values
+
+- `set/empty` is the empty set
 
 # Gotchas
 
@@ -205,6 +212,8 @@ repl:2:> (set/new 1 2 3 nil)
 In order to support iteratation with Janet's `next` protocol for unordered containers, Jimmy boxes the corresponding C++ iterator into an abstract type to use as the key. This means that a simple `(each el set (print el))` will allocate memory for the abstract type containing the iterator. It's not a *lot* of memory, but it's short-lived garbage and Janet's GC currently does nothing to optimize for short-lived garbage. This probably won't cause performance problems, just something to bear in mind.
 
 I cannot think of a reasonable way to support iteration over `map` values with a meaningful key, because `immer` does not exposes enough functionality to retrieve the next key given an extant key in anything less than linear time. `immer::map`'s `find` returns a *pointer* rather than an iterator that we could use to advance to implement this. Jimmy does not currently have bindings for `map` at all, though, so you can't tell.
+
+Also, I don't know C++, which is sort of a flaw when trying to write bindings for a C++ library, so I would caution you to read the code with a very critical eye. Code review welcome!
 
 # TODO
 
