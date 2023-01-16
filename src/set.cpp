@@ -2,13 +2,75 @@
 #include <immer/set_transient.hpp>
 
 #define CAST_SET(expr) static_cast<immer::set<Janet> *>((expr))
-#define CAST_SET_ITERATOR(expr) static_cast<immer::set<Janet>::iterator *>((expr))
+#define CAST_SET_ITERATOR(expr) static_cast<SetIterator *>((expr))
 #define NEW_SET() new (janet_abstract(&set_type, sizeof(immer::set<Janet>))) immer::set<Janet>()
 
+typedef struct {
+  immer::set<Janet>::iterator actual;
+  Janet backing_set;
+} SetIterator;
+
+static void check_set_iterator(void *data, SetIterator *iterator) {
+  if (data != janet_unwrap_abstract(iterator->backing_set)) {
+    janet_panicf("foreign iterator");
+  }
+}
+
+static int set_iterator_gcmark(void *data, size_t len) {
+  (void) len;
+  auto iterator = CAST_SET_ITERATOR(data);
+  janet_mark(iterator->backing_set);
+  return 0;
+}
+
+static Janet set_iterator_next(void *data, Janet key);
+static int set_iterator_get(void *data, Janet key, Janet *out);
 static const JanetAbstractType set_iterator_type = {
   "jimmy/set-iterator",
-  JANET_ATEND_NAME
+  .gc = NULL,
+  .gcmark = set_iterator_gcmark,
+  .get = set_iterator_get,
+  .put = NULL,
+  .marshal = NULL,
+  .unmarshal = NULL,
+  .tostring = NULL,
+  .compare = NULL,
+  .hash = NULL,
+  .next = set_iterator_next,
+  .call = NULL,
 };
+
+static Janet set_iterator_next(void *data, Janet key) {
+  if (janet_checktype(key, JANET_NIL)) {
+    return janet_wrap_abstract(data);
+  } else if (janet_checkabstract(key, &set_iterator_type) && janet_unwrap_abstract(key) == data) {
+    auto iterator = CAST_SET_ITERATOR(janet_unwrap_abstract(key));
+    auto set = CAST_SET(janet_unwrap_abstract(iterator->backing_set));
+    iterator->actual++;
+    if (iterator->actual == set->end()) {
+      return janet_wrap_nil();
+    } else {
+      return key;
+    }
+  } else {
+    janet_panicf("illegal key %v", key);
+  }
+}
+
+static int set_iterator_get(void *data, Janet key, Janet *out) {
+  if (janet_checkabstract(key, &set_iterator_type) && janet_unwrap_abstract(key) == data) {
+    auto iterator = CAST_SET_ITERATOR(janet_unwrap_abstract(key));
+    auto set = CAST_SET(janet_unwrap_abstract(iterator->backing_set));
+    if (iterator->actual == set->end()) {
+      return 0;
+    } else {
+      *out = *iterator->actual;
+      return 1;
+    }
+  } else {
+    return 0;
+  }
+}
 
 static int set_gc(void *data, size_t len) {
   (void) len;
@@ -60,7 +122,9 @@ static const JanetMethod set_methods[] = {
 
 static int set_get(void *data, Janet key, Janet *out) {
   if (janet_checkabstract(key, &set_iterator_type)) {
-    *out = **CAST_SET_ITERATOR(janet_unwrap_abstract(key));
+    auto iterator = CAST_SET_ITERATOR(janet_unwrap_abstract(key));
+    check_set_iterator(data, iterator);
+    *out = *iterator->actual;
     return 1;
   } else if (janet_checktype(key, JANET_KEYWORD)) {
     return janet_getmethod(janet_unwrap_keyword(key), set_methods, out);
@@ -73,8 +137,9 @@ static Janet set_next(void *data, Janet key) {
   auto set = CAST_SET(data);
 
   if (janet_checktype(key, JANET_NIL)) {
-    auto iterator = CAST_SET_ITERATOR(janet_abstract(&set_iterator_type, sizeof(immer::set<Janet>::iterator)));
-    *iterator = set->begin();
+    auto iterator = CAST_SET_ITERATOR(janet_abstract(&set_iterator_type, sizeof(SetIterator)));
+    iterator->backing_set = janet_wrap_abstract(data);
+    iterator->actual = set->begin();
     return janet_wrap_abstract(iterator);
   }
 
@@ -82,8 +147,9 @@ static Janet set_next(void *data, Janet key) {
     janet_panicf("set key should be an iterator; got %v", key);
   }
   auto iterator = CAST_SET_ITERATOR(janet_unwrap_abstract(key));
-  (*iterator)++;
-  if (*iterator == set->end()) {
+  check_set_iterator(data, iterator);
+  iterator->actual++;
+  if (iterator->actual == set->end()) {
     return janet_wrap_nil();
   } else {
     return key;

@@ -13,7 +13,6 @@ namespace std {
       return static_cast<bool>(janet_equals(a, b));
     }
   };
-
 }
 
 bool operator==(const Janet& a, const Janet& b) {

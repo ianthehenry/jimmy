@@ -120,3 +120,14 @@
 
 (assert= ((set/new 1 2 3 4 5) 1) true)
 (assert= ((set/new 1 2 3 4 5) 6) false)
+
+# Iteration
+
+(def iterator (next (set/new 1 2 3)))
+(assert-throws (get (set/new 1 2 3) iterator) "foreign iterator")
+
+(assert= [1 2 3] (tuple/slice (sorted (seq [x :in (set/new 1 2 3)] x))))
+
+(def iterator (next (set/new 1 2 3)))
+(assert= [1 2 3] (tuple/slice (sorted
+  (seq [x :in iterator] x))))
