@@ -8,6 +8,8 @@
 (declare-source
   :source [
     "src/set.janet"
+    "src/map.janet"
+    "src/util.janet"
     "src/init.janet"
   ]
   :prefix "jimmy")
