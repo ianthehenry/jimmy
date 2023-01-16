@@ -210,3 +210,4 @@ I cannot think of a reasonable way to support iteration over `map` values with a
 
 - [ ] add bindings for `immer::map`
 - [ ] 1.0 release
+- [ ] iterators do not keep their backing data structures alive

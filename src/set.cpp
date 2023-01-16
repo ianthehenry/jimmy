@@ -1,24 +1,9 @@
-#include <janet.h>
 #include <immer/set.hpp>
 #include <immer/set_transient.hpp>
 
-#define CAST_SET(expr) static_cast<immer::set<Janet> *>(expr)
-#define CAST_SET_ITERATOR(expr) static_cast<immer::set<Janet>::iterator *>(expr)
+#define CAST_SET(expr) static_cast<immer::set<Janet> *>((expr))
+#define CAST_SET_ITERATOR(expr) static_cast<immer::set<Janet>::iterator *>((expr))
 #define NEW_SET() new (janet_abstract(&set_type, sizeof(immer::set<Janet>))) immer::set<Janet>()
-
-namespace std {
-  template <> struct hash<Janet> {
-    size_t operator()(const Janet &x) const {
-      return static_cast<size_t>(janet_hash(x));
-    }
-  };
-
-  template <> struct equal_to<Janet> {
-    size_t operator()(const Janet &a, const Janet &b) const {
-      return static_cast<bool>(janet_equals(a, b));
-    }
-  };
-}
 
 static const JanetAbstractType set_iterator_type = {
   "jimmy/set-iterator",
@@ -141,15 +126,11 @@ static int set_compare(void *data1, void *data2) {
   return set1 > set2 ? 1 : -1;
 }
 
-static int32_t hash_mix(int32_t input, int32_t other) {
-  return input ^ (other + 0x7BA481B5 + (input << 6) + (input >> 2));
-}
-
 static int32_t set_hash(void *data, size_t len) {
   (void) len;
   auto set = CAST_SET(data);
   // start with a random permutation of 16 1s and 16 0s
-  uint32_t hash = 0x7EB6D401;
+  uint32_t hash = 0b01111110101101101101010000000001;
   // Iteration is order is stable over hash values, regardless
   // of how you construct the set.
   // https://github.com/arximboldi/immer/discussions/249#discussioncomment-4620734
@@ -384,44 +365,6 @@ static Janet cfun_set_to_array(int32_t argc, Janet *argv) {
     janet_array_push(result, el);
   }
   return janet_wrap_array(result);
-}
-
-// TODO: this is copied from `janet_method_invoke` -- there doesn't seem
-// to be an exposed way to do this!
-static Janet call_callable(Janet callable, int32_t argc, Janet *argv) {
-  switch (janet_type(callable)) {
-    case JANET_CFUNCTION:
-      return (janet_unwrap_cfunction(callable))(argc, argv);
-    case JANET_FUNCTION: {
-      JanetFunction *fun = janet_unwrap_function(callable);
-      return janet_call(fun, argc, argv);
-    }
-    case JANET_ABSTRACT: {
-      JanetAbstract abst = janet_unwrap_abstract(callable);
-      const JanetAbstractType *at = janet_abstract_type(abst);
-      if (NULL != at->call) {
-        return at->call(abst, argc, argv);
-      }
-    }
-    /* fallthrough */
-    case JANET_STRING:
-    case JANET_BUFFER:
-    case JANET_TABLE:
-    case JANET_STRUCT:
-    case JANET_ARRAY:
-    case JANET_TUPLE: {
-      if (argc != 1) {
-        janet_panicf("%v called with %d arguments, possibly expected 1", callable, argc);
-      }
-      return janet_in(callable, argv[0]);
-    }
-    default: {
-      if (argc != 1) {
-        janet_panicf("%v called with %d arguments, possibly expected 1", callable, argc);
-      }
-      return janet_in(argv[0], callable);
-    }
-  }
 }
 
 static Janet cfun_set_filter(int32_t argc, Janet *argv) {

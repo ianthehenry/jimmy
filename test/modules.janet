@@ -1,3 +1,5 @@
 (import ../src :as jimmy)
 (import ../src/set)
+(import ../src/map)
 (assert (= jimmy/set/new set/new))
+(assert (= jimmy/map/new map/new))

@@ -1,19 +1,11 @@
 (import ../src/set)
+(use ./helpers)
 
-(defn assert= [a b]
-  (unless (= a b)
-    (error (string/format "%q != %q" a b)))
-  (unless (= (hash a) (hash b))
-    (error (string/format "(hash %q) != (hash %q)" a b))))
-
-(defmacro assert-throws [expr err]
-  ~(try ,expr ([err] (assert (= err ,err)))))
+# Basics
 
 (assert=
   (set/add (set/new 1 2) 3)
   (set/remove (set/new 1 2 3 4) 4))
-
-# Basics
 
 (def x (set/new 1 2 3))
 (def y (set/new 1 2 3))
@@ -39,6 +31,10 @@
 # Length
 
 (assert (= 1 (length (set/new nil nil nil))))
+
+# Marshaling
+
+(assert-round-trip (set/new 1 2 3))
 
 # Union
 
@@ -119,3 +115,8 @@
 
 (assert= (set/count (set/new 1 2 3 4 5) odd?) 3)
 (assert= (set/count (set/new 1 2 3 4 5) (set/new 1 2)) 2)
+
+# Callable
+
+(assert= ((set/new 1 2 3 4 5) 1) true)
+(assert= ((set/new 1 2 3 4 5) 6) false)
