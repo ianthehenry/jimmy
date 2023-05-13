@@ -69,6 +69,10 @@ You can `(use jimmy)` to bring all types into scope as `set/new`, `map/new`, etc
   ["`map/empty` is the empty map"]
   [])
 
+(print-docs-for "vec"
+  ["`vec/empty` is the empty vector"]
+  [])
+
 (print
 `````
 # Gotchas
