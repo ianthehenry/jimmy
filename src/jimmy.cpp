@@ -70,12 +70,16 @@ static Janet call_callable(Janet callable, int32_t argc, Janet *argv) {
 
 #include "set.cpp"
 #include "map.cpp"
+#include "vec.cpp"
 
 JANET_MODULE_ENTRY(JanetTable *env) {
   janet_cfuns(env, "jimmy", set_cfuns);
   janet_cfuns(env, "jimmy", map_cfuns);
+  janet_cfuns(env, "jimmy", vec_cfuns);
   janet_register_abstract_type(&set_type);
   janet_register_abstract_type(&set_iterator_type);
   janet_register_abstract_type(&map_type);
   janet_register_abstract_type(&map_iterator_type);
+  janet_register_abstract_type(&vec_type);
+  janet_register_abstract_type(&tvec_type);
 }

@@ -239,6 +239,148 @@ Returns an iterator over the values in the map.
 
 - `map/empty` is the empty map
 
+## `jimmy/vec`
+
+### Functions
+
+```janet
+(vec/count vec pred)
+```
+
+Returns the number of elements in the vector that match the given predicate. `pred` can be any callable value, not just a function.
+
+Note that the arguments are in a different order than Janet's `count` function.
+
+---
+
+```janet
+(vec/filter vec pred)
+```
+
+Returns a vector containing only the elements for which the predicate returns a truthy value. `pred` can be any callable value, not just a function.
+
+Note that the arguments are in the opposite order of Janet's `filter` function.
+
+---
+
+```janet
+(vec/filter-map vec f)
+```
+
+Like `vec/map`, but excludes `nil`. `f` can be any callable value, not just a function.
+
+---
+
+```janet
+(vec/first vec)
+```
+
+Returns the first element of the vector.
+
+---
+
+```janet
+(vec/last vec)
+```
+
+Returns the last element of the vector.
+
+---
+
+```janet
+(vec/map vec f)
+```
+
+Returns a new vector derived from the given transformation function. `f` can be any callable value, not just a function.
+
+Note that the arguments are in the opposite order of Janet's `map` function.
+
+---
+
+```janet
+(vec/new & xs)
+```
+
+Returns a persistent immutable vector containing only the listed elements.
+
+---
+
+```janet
+(vec/of iterable)
+```
+
+Returns a vector of all the values in an iterable data structure.
+
+---
+
+```janet
+(vec/pop vec)
+```
+
+Returns a new vector with the last element removed.
+
+---
+
+```janet
+(vec/popn vec)
+```
+
+Returns a new vector with the last n elements removed.
+
+---
+
+```janet
+(vec/push vec & xs)
+```
+
+Returns a new vector containing all of the elements from the original and all of the subsequent arguments.
+
+---
+
+```janet
+(vec/put vec n val)
+```
+
+Returns a new vector with nth element set to val.
+
+---
+
+```janet
+(vec/reduce vec init f)
+```
+
+Returns a reduction of the elements in the vector. `f` can be any callable value, not just a function.
+
+Note that the arguments are in a different order than Janet's `reduce` function.
+
+---
+
+```janet
+(vec/take vec n)
+```
+
+Returns a new vector containing the first n elements of vec, or all of vec if n >= (length vec).
+
+---
+
+```janet
+(vec/to-array vec)
+```
+
+Returns an array of all of the elements in the vector.
+
+---
+
+```janet
+(vec/to-tuple vec)
+```
+
+Returns a tuple of all of the elements in the vector.
+
+### Values
+
+- `vec/empty` is the empty vector
+
 # Gotchas
 
 Janet's iteration protocol is not flexible enough for Jimmy to support `eachk` or `eachp` or the `:keys` and `:pairs` directive in `loop`-family macros.
