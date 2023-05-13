@@ -5,6 +5,31 @@
 #define CAST_SET_ITERATOR(expr) static_cast<SetIterator *>((expr))
 #define NEW_SET() new (janet_abstract(&set_type, sizeof(immer::set<Janet>))) immer::set<Janet>()
 
+#define CAST_TSET(expr) static_cast<immer::set_transient<Janet> *>((expr))
+#define NEW_TSET() new (janet_abstract(&tset_type, sizeof(immer::set_transient<Janet>))) immer::set_transient<Janet>()
+
+static int tset_gc(void *data, size_t len) {
+  (void) len;
+  auto tset = CAST_TSET(data);
+  tset->~set_transient();
+  return 0;
+}
+
+static const JanetAbstractType tset_type = {
+  .name = "jimmy/tset",
+  .gc = tset_gc,
+  .gcmark = NULL,
+  .get = NULL,
+  .put = NULL,
+  .marshal = NULL,
+  .unmarshal = NULL,
+  .tostring = NULL,
+  .compare = NULL,
+  .hash = NULL,
+  .next = NULL,
+  .call = NULL,
+};
+
 typedef struct {
   immer::set<Janet>::iterator actual;
   Janet backing_set;
@@ -235,7 +260,8 @@ static Janet cfun_set_of(int32_t argc, Janet *argv) {
   janet_fixarity(argc, 1);
   Janet iterable = argv[0];
   auto set = NEW_SET();
-  auto transient = set->transient();
+  auto transient = NEW_TSET();
+  *transient = set->transient();
 
   auto key = janet_wrap_nil();
   while (true) {
@@ -243,10 +269,10 @@ static Janet cfun_set_of(int32_t argc, Janet *argv) {
     if (janet_checktype(key, JANET_NIL)) {
       break;
     }
-    transient.insert(janet_in(iterable, key));
+    transient->insert(janet_in(iterable, key));
   }
 
-  *set = transient.persistent();
+  *set = transient->persistent();
   return janet_wrap_abstract(set);
 }
 
@@ -254,7 +280,8 @@ static Janet cfun_set_of_keys(int32_t argc, Janet *argv) {
   janet_fixarity(argc, 1);
   Janet iterable = argv[0];
   auto set = NEW_SET();
-  auto transient = set->transient();
+  auto transient = NEW_TSET();
+  *transient = set->transient();
 
   auto key = janet_wrap_nil();
   while (true) {
@@ -262,10 +289,10 @@ static Janet cfun_set_of_keys(int32_t argc, Janet *argv) {
     if (janet_checktype(key, JANET_NIL)) {
       break;
     }
-    transient.insert(key);
+    transient->insert(key);
   }
 
-  *set = transient.persistent();
+  *set = transient->persistent();
   return janet_wrap_abstract(set);
 }
 
@@ -307,14 +334,15 @@ static Janet cfun_set_remove(int32_t argc, Janet *argv) {
 
 static Janet cfun_set_union(int32_t argc, Janet *argv) {
   auto new_set = NEW_SET();
-  auto transient = new_set->transient();
+  auto transient = NEW_TSET();
+  *transient = new_set->transient();
   for (int32_t i = 0; i < argc; i++) {
     auto old_set = CAST_SET(janet_getabstract(argv, i, &set_type));
     for (auto el : *old_set) {
-      transient.insert(el);
+      transient->insert(el);
     }
   }
-  *new_set = transient.persistent();
+  *new_set = transient->persistent();
   return janet_wrap_abstract(new_set);
 }
 
@@ -347,15 +375,16 @@ static Janet cfun_set_intersection(int32_t argc, Janet *argv) {
 static Janet cfun_set_difference(int32_t argc, Janet *argv) {
   janet_arity(argc, 1, -1);
   auto first_set = CAST_SET(janet_getabstract(argv, 0, &set_type));
-  auto transient = first_set->transient();
+  auto transient = NEW_TSET();
+  *transient = first_set->transient();
   for (int32_t i = 1; i < argc; i++) {
     auto other_set = CAST_SET(janet_getabstract(argv, i, &set_type));
     for (auto el : *other_set) {
-      transient.erase(el);
+      transient->erase(el);
     }
   }
   auto new_set = NEW_SET();
-  *new_set = transient.persistent();
+  *new_set = transient->persistent();
   return janet_wrap_abstract(new_set);
 }
 
@@ -439,13 +468,14 @@ static Janet cfun_set_filter(int32_t argc, Janet *argv) {
   auto pred = argv[1];
 
   auto new_set = NEW_SET();
-  auto transient = new_set->transient();
+  auto transient = NEW_TSET();
+  *transient = new_set->transient();
   for (auto el : *set) {
     if (janet_truthy(call_callable(pred, 1, &el))) {
-      transient.insert(el);
+      transient->insert(el);
     }
   }
-  *new_set = transient.persistent();
+  *new_set = transient->persistent();
   return janet_wrap_abstract(new_set);
 }
 
@@ -455,11 +485,12 @@ static Janet cfun_set_map(int32_t argc, Janet *argv) {
   auto f = argv[1];
 
   auto new_set = NEW_SET();
-  auto transient = new_set->transient();
+  auto transient = NEW_TSET();
+  *transient = new_set->transient();
   for (auto el : *set) {
-    transient.insert(call_callable(f, 1, &el));
+    transient->insert(call_callable(f, 1, &el));
   }
-  *new_set = transient.persistent();
+  *new_set = transient->persistent();
   return janet_wrap_abstract(new_set);
 }
 
@@ -469,14 +500,15 @@ static Janet cfun_set_filter_map(int32_t argc, Janet *argv) {
   auto f = argv[1];
 
   auto new_set = NEW_SET();
-  auto transient = new_set->transient();
+  auto transient = NEW_TSET();
+  *transient = new_set->transient();
   for (auto el : *set) {
     Janet x = call_callable(f, 1, &el);
     if (!janet_checktype(x, JANET_NIL)) {
-      transient.insert(x);
+      transient->insert(x);
     }
   }
-  *new_set = transient.persistent();
+  *new_set = transient->persistent();
   return janet_wrap_abstract(new_set);
 }
 

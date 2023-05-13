@@ -78,6 +78,7 @@ JANET_MODULE_ENTRY(JanetTable *env) {
   janet_cfuns(env, "jimmy", vec_cfuns);
   janet_register_abstract_type(&set_type);
   janet_register_abstract_type(&set_iterator_type);
+  janet_register_abstract_type(&tset_type);
   janet_register_abstract_type(&map_type);
   janet_register_abstract_type(&map_iterator_type);
   janet_register_abstract_type(&vec_type);
