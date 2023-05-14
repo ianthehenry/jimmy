@@ -115,7 +115,7 @@ Returns a set of all the values in an iterable data structure.
 (set/of-keys iterable)
 ```
 
-Returns a set of all the keys in an interable data structure.
+Returns a set of all the keys in an iterable data structure.
 
 ---
 

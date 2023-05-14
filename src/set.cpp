@@ -544,7 +544,7 @@ static const JanetReg set_cfuns[] = {
   {"set/of", cfun_set_of, "(set/of iterable)\n\n"
     "Returns a set of all the values in an iterable data structure."},
   {"set/of-keys", cfun_set_of_keys, "(set/of-keys iterable)\n\n"
-    "Returns a set of all the keys in an interable data structure."},
+    "Returns a set of all the keys in an iterable data structure."},
   {"set/add", cfun_set_add, "(set/add set & xs)\n\n"
     "Returns a new set containing all of the elements from the original set and all of the subsequent arguments."},
   {"set/remove", cfun_set_remove, "(set/remove set & xs)\n\n"
