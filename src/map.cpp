@@ -148,6 +148,9 @@ static int map_get(void *data, Janet key, Janet *out) {
 }
 
 static Janet new_map_iterator(immer::map<Janet, Janet> *map, IteratorType type) {
+  if (map->size() == 0) {
+    return janet_wrap_nil();
+  }
   auto iterator = CAST_MAP_ITERATOR(janet_abstract(&map_iterator_type, sizeof(MapIterator)));
   iterator->backing_map = janet_wrap_abstract(map);
   iterator->actual = map->begin();

@@ -162,6 +162,9 @@ static Janet set_next(void *data, Janet key) {
   auto set = CAST_SET(data);
 
   if (janet_checktype(key, JANET_NIL)) {
+    if (set->size() == 0) {
+      return janet_wrap_nil();
+    }
     auto iterator = CAST_SET_ITERATOR(janet_abstract(&set_iterator_type, sizeof(SetIterator)));
     iterator->backing_set = janet_wrap_abstract(data);
     iterator->actual = set->begin();

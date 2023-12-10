@@ -33,6 +33,7 @@
 (assert-throws (get (map/new 1 2 3 4) iterator) "foreign iterator")
 
 (assert= [[1 2] [3 4]] (tuple/slice (sorted (seq [x :in (map/new 1 2 3 4)] x))))
+(assert= [] (tuple/slice (values map/empty)))
 
 (def iterator (next (map/new 1 2 3 4)))
 (assert= [[1 2] [3 4]] (tuple/slice (sorted

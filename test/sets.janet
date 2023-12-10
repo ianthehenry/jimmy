@@ -123,6 +123,8 @@
 
 # Iteration
 
+(assert= [] (tuple/slice (values set/empty)))
+
 (def iterator (next (set/new 1 2 3)))
 (assert-throws (get (set/new 1 2 3) iterator) "foreign iterator")
 
