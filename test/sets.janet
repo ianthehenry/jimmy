@@ -98,6 +98,11 @@
 (assert= (set/map (set/new 1 2 3) |(* $ 2)) (set/new 2 4 6))
 (assert= (set/map (set/new 1 2 3) {1 10 2 15}) (set/new 10 15 nil))
 
+# Mapcat
+
+(assert= (set/mapcat (set/new 0 1 2 3) |[$ (* $ 2)]) (set/new 0 1 2 3 4 6))
+(assert= (set/mapcat (set/new 0 1 2 3) |(coro (yield $) (yield (* 2 $)))) (set/new 0 1 2 3 4 6))
+
 # Filter-map
 
 (assert= (set/filter-map (set/new 1 2 3) |(if (= $ 2) nil (* $ 2))) (set/new 2 6))

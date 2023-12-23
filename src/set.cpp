@@ -497,6 +497,26 @@ static Janet cfun_set_map(int32_t argc, Janet *argv) {
   return janet_wrap_abstract(new_set);
 }
 
+static Janet cfun_set_mapcat(int32_t argc, Janet *argv) {
+  janet_fixarity(argc, 2);
+  auto set = CAST_SET(janet_getabstract(argv, 0, &set_type));
+  auto f = argv[1];
+
+  auto new_set = NEW_SET();
+  auto transient = NEW_TSET();
+  *transient = new_set->transient();
+  for (auto el : *set) {
+    Janet iterable = call_callable(f, 1, &el);
+    for (Janet key = janet_next(iterable, janet_wrap_nil());
+         !janet_checktype(key, JANET_NIL);
+         key = janet_next(iterable, key)) {
+      transient->insert(janet_get(iterable, key));
+    }
+  }
+  *new_set = transient->persistent();
+  return janet_wrap_abstract(new_set);
+}
+
 static Janet cfun_set_filter_map(int32_t argc, Janet *argv) {
   janet_fixarity(argc, 2);
   auto set = CAST_SET(janet_getabstract(argv, 0, &set_type));
@@ -574,6 +594,10 @@ static const JanetReg set_cfuns[] = {
     "Returns a new set derived from the given transformation function. "
     "`f` can be any callable value, not just a function.\n\n"
     "Note that the arguments are in the opposite order of Janet's `map` function."},
+  {"set/mapcat", cfun_set_mapcat, "(set/mapcat set f)\n\n"
+    "Returns the union of mapping `f` over the original set. "
+    "`f` can be any callable value, not just a function, but must produce an iterable.\n\n"
+    "Note that the arguments are in the opposite order of Janet's `mapcat` function."},
   {"set/filter", cfun_set_filter, "(set/filter set pred)\n\n"
     "Returns a set containing only the elements for which the predicate returns a truthy value. "
     "`pred` can be any callable value, not just a function.\n\n"
